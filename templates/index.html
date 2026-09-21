@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sliding Window Flow Control Simulator</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Header Section -->
+        <header class="app-header">
+            <div class="header-badge">Computer Networks Mini Project</div>
+            <h1 class="app-title">Sliding Window Flow Control Simulator</h1>
+            <p class="app-subtitle">Interactive demonstration of reliable data transmission, frame sliding window logic, and network efficiency analysis.</p>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <div class="main-grid">
+            
+            <!-- Left Panel: Input Configuration & Stats -->
+            <aside class="panel input-panel">
+                <div class="panel-header">
+                    <span class="panel-icon">⚙️</span>
+                    <h2>Simulation Controls</h2>
+                </div>
+                
+                <form id="simulatorForm" onsubmit="return false;">
+                    <div class="input-group">
+                        <label for="totalFrames">
+                            Total Number of Frames
+                            <span class="tooltip" title="Total data frames to be sent from Sender to Receiver">ℹ️</span>
+                        </label>
+                        <input type="number" id="totalFrames" value="8" min="1" max="20" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="windowSize">
+                            Sliding Window Size (N)
+                            <span class="tooltip" title="Maximum number of unacknowledged frames permitted">ℹ️</span>
+                        </label>
+                        <input type="number" id="windowSize" value="3" min="1" max="10" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="transTime">
+                            Frame Transmission Time (ms)
+                            <span class="tooltip" title="Time taken to push frame onto network link">ℹ️</span>
+                        </label>
+                        <input type="number" id="transTime" value="1000" min="200" step="100" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="netDelay">
+                            Network Delay / RTT (ms)
+                            <span class="tooltip" title="Time required for frame to travel to receiver and return ACK">ℹ️</span>
+                        </label>
+                        <input type="number" id="netDelay" value="1000" min="200" step="100" required>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="button" id="startBtn" class="btn btn-primary">
+                            <span>▶</span> Start Simulation
+                        </button>
+                        <button type="button" id="pauseBtn" class="btn btn-secondary" disabled>
+                            <span>⏸</span> Pause
+                        </button>
+                        <button type="button" id="resetBtn" class="btn btn-danger">
+                            <span>🔄</span> Reset
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Legend Card -->
+                <div class="legend-card">
+                    <h3>Frame Status Legend</h3>
+                    <div class="legend-items">
+                        <div class="legend-item"><span class="badge badge-waiting"></span> Waiting</div>
+                        <div class="legend-item"><span class="badge badge-window"></span> In Window</div>
+                        <div class="legend-item"><span class="badge badge-sent"></span> Sent / Transmitting</div>
+                        <div class="legend-item"><span class="badge badge-ack"></span> Acknowledged</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Panel: Interactive Visualizer & Network Tracks -->
+            <main class="panel visualizer-panel">
+                
+                <!-- Sender Section & Window Visualizer -->
+                <section class="section-card sender-card">
+                    <div class="section-title">
+                        <span class="icon">📤</span>
+                        <h3>Sender Section & Sliding Window</h3>
+                        <span class="window-range-tag" id="windowRangeTag">Window: [1 2 3]</span>
+                    </div>
+                    <div class="sender-queue-container">
+                        <div class="frames-queue" id="senderFramesQueue">
+                            <!-- Frame boxes rendered dynamically by JavaScript -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Network Channel (Frame Transmission & ACK Track) -->
+                <section class="section-card channel-card">
+                    <div class="channel-header">
+                        <span class="node-label sender-label">SENDER</span>
+                        <div class="channel-title-container">
+                            <span class="channel-line"></span>
+                            <span class="channel-title">PHYSICAL NETWORK CHANNEL</span>
+                            <span class="channel-line"></span>
+                        </div>
+                        <span class="node-label receiver-label">RECEIVER</span>
+                    </div>
+
+                    <!-- Track for Frames (Sender -> Receiver) -->
+                    <div class="track frame-track">
+                        <div class="track-label">Data Frames (Sender ➔ Receiver)</div>
+                        <div class="animation-lane" id="frameLane">
+                            <!-- Dynamic moving frame elements will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Track for ACKs (Receiver -> Sender) -->
+                    <div class="track ack-track">
+                        <div class="track-label">Acknowledgements (Receiver ➔ Sender)</div>
+                        <div class="animation-lane" id="ackLane">
+                            <!-- Dynamic moving ACK elements will be rendered here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Receiver Section -->
+                <section class="section-card receiver-card">
+                    <div class="section-title">
+                        <span class="icon">📥</span>
+                        <h3>Receiver Section & ACK Generator</h3>
+                    </div>
+                    <div class="receiver-queue-container">
+                        <div class="receiver-queue" id="receiverFramesQueue">
+                            <!-- Received frames list rendered dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results & Efficiency Analysis Section -->
+                <section class="section-card results-card">
+                    <div class="section-title">
+                        <span class="icon">📊</span>
+                        <h3>Window Size & Efficiency Analysis</h3>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="statTotalFrames">8</div>
+                            <div class="stat-label">Total Frames</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="statWindowSize">3</div>
+                            <div class="stat-label">Window Size (N)</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="statSentCount">0</div>
+                            <div class="stat-label">Frames Sent</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="statAckCount">0</div>
+                            <div class="stat-label">ACKs Received</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="statRounds">0</div>
+                            <div class="stat-label">Transmission Rounds</div>
+                        </div>
+                        <div class="stat-box highlight-box">
+                            <div class="stat-value" id="statEfficiency">0%</div>
+                            <div class="stat-label">Network Efficiency</div>
+                        </div>
+                    </div>
+
+                    <!-- Efficiency Bar & Formula Card -->
+                    <div class="efficiency-details">
+                        <div class="efficiency-bar-container">
+                            <div class="efficiency-bar-fill" id="efficiencyBarFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="formula-box">
+                            <strong>Efficiency Formula:</strong>
+                            <code>Efficiency = (Successful Transmissions / Total Transmissions) × 100</code>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Event Logs Section -->
+                <section class="section-card log-card">
+                    <div class="section-title">
+                        <span class="icon">📜</span>
+                        <h3>Simulation Event Log</h3>
+                        <button class="btn-clear-log" id="clearLogBtn">Clear Log</button>
+                    </div>
+                    <div class="log-container" id="eventLog">
+                        <div class="log-entry log-system">System ready. Click "Start Simulation" to begin data transmission.</div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <footer class="app-footer">
+            <p>Sliding Window Flow Control Protocol Simulator &bull; Computer Networks Project</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
